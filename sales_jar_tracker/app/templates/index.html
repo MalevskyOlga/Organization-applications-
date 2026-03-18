@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="he" dir="rtl">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sales Jar Tracker</title>
+  <title>מעקב צנצנת מכירות</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -198,21 +198,21 @@
 </head>
 <body>
 
-  <h1>🫙 Sales Jar Tracker</h1>
-  <p class="subtitle">Upload your monthly Excel file to generate the jar visualization</p>
+  <h1>🫙 מעקב צנצנת מכירות</h1>
+  <p class="subtitle">העלו את קובץ האקסל החודשי שלכם ליצירת הדמיית הצנצנת</p>
 
   <div class="card">
     <form id="uploadForm">
       <div class="drop-zone" id="dropZone">
         <div class="drop-icon">📊</div>
-        <p class="drop-text"><strong>Click to browse</strong> or drag & drop your Excel file</p>
-        <p class="drop-text" style="margin-top:6px;font-size:0.82rem;">Supported: .xlsx, .xlsm</p>
+        <p class="drop-text"><strong>לחצו לבחירת קובץ</strong> או גררו ושחררו את קובץ האקסל</p>
+        <p class="drop-text" style="margin-top:6px;font-size:0.82rem;">נתמך: .xlsx, .xlsm</p>
         <p class="file-chosen" id="fileChosen"></p>
         <input type="file" id="fileInput" name="file" accept=".xlsx,.xlsm" required />
       </div>
 
       <button type="submit" class="btn btn-generate" id="genBtn">
-        <span id="btnLabel">✨ Generate Image</span>
+        <span id="btnLabel">✨ צור תמונה</span>
         <span class="spinner" id="spinner"></span>
       </button>
     </form>
@@ -222,29 +222,29 @@
 
   <div class="result-area" id="resultArea">
     <div class="result-card">
-      <p class="result-title">Your Sales Jar — Generated Image</p>
+      <p class="result-title">צנצנת המכירות שלך — תמונה שנוצרה</p>
       <img id="resultImg" class="result-img" src="" alt="Sales Jar Tracker" />
 
       <div class="stats-row">
         <div class="stat-box">
-          <div class="stat-label">Current Sales</div>
+          <div class="stat-label">מכירות נוכחיות</div>
           <div class="stat-value" id="statCurrent">—</div>
         </div>
         <div class="stat-box">
-          <div class="stat-label">Monthly Target</div>
+          <div class="stat-label">יעד חודשי</div>
           <div class="stat-value" id="statTarget">—</div>
         </div>
         <div class="stat-box">
-          <div class="stat-label">Progress</div>
+          <div class="stat-label">התקדמות</div>
           <div class="stat-value" id="statPct">—</div>
         </div>
       </div>
 
       <a class="btn-download" id="downloadBtn" href="#" onclick="downloadImage(event)">
-        ⬇ Download PNG
+        ⬇ הורד PNG
       </a>
       <a class="btn-download-ppt" id="downloadPptBtn" href="#" onclick="downloadPpt(event)">
-        📊 Download PPT
+        📊 הורד PPT
       </a>
     </div>
   </div>
@@ -298,7 +298,7 @@
     hideError();
     resultArea.style.display = "none";
 
-    if (!fileInput.files.length) { showError("Please select an Excel file."); return; }
+    if (!fileInput.files.length) { showError("אנא בחרו קובץ אקסל."); return; }
 
     setLoading(true);
     const fd = new FormData();
@@ -308,7 +308,7 @@
       const res  = await fetch("/generate", { method: "POST", body: fd });
       const data = await res.json();
 
-      if (!res.ok || data.error) { showError(data.error || "Unknown error."); return; }
+      if (!res.ok || data.error) { showError(data.error || "שגיאה לא ידועה."); return; }
 
       resultImg.src = data.image;
       document.getElementById("statCurrent").textContent = fmt(data.current_sales);
@@ -318,7 +318,7 @@
       resultArea.scrollIntoView({ behavior: "smooth", block: "start" });
 
     } catch (err) {
-      showError("Network error. Is the server running?");
+      showError("שגיאת רשת. האם השרת פועל?");
     } finally {
       setLoading(false);
     }
@@ -326,13 +326,13 @@
 
   async function downloadImage(e) {
     e.preventDefault();
-    if (!fileInput.files.length) { showError("Please generate an image first."); return; }
+    if (!fileInput.files.length) { showError("אנא צרו תמונה תחילה."); return; }
 
     const fd = new FormData();
     fd.append("file", fileInput.files[0]);
 
     const res = await fetch("/download", { method: "POST", body: fd });
-    if (!res.ok) { showError("Download failed."); return; }
+    if (!res.ok) { showError("ההורדה נכשלה."); return; }
 
     const blob = await res.blob();
     const url  = URL.createObjectURL(blob);
@@ -342,18 +342,18 @@
   }
   async function downloadPpt(e) {
     e.preventDefault();
-    if (!fileInput.files.length) { showError("Please generate an image first."); return; }
+    if (!fileInput.files.length) { showError("אנא צרו תמונה תחילה."); return; }
 
     const btn = document.getElementById("downloadPptBtn");
     btn.classList.add("loading");
-    btn.textContent = "⏳ Generating PPT…";
+    btn.textContent = "⏳ יוצר PPT…";
 
     const fd = new FormData();
     fd.append("file", fileInput.files[0]);
 
     try {
       const res = await fetch("/download_ppt", { method: "POST", body: fd });
-      if (!res.ok) { showError("PPT download failed."); return; }
+      if (!res.ok) { showError("הורדת PPT נכשלה."); return; }
 
       const blob = await res.blob();
       const url  = URL.createObjectURL(blob);
@@ -361,10 +361,10 @@
       a.href = url; a.download = "sales_jar_tracker.pptx"; a.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      showError("Network error during PPT download.");
+      showError("שגיאת רשת בהורדת PPT.");
     } finally {
       btn.classList.remove("loading");
-      btn.textContent = "📊 Download PPT";
+      btn.textContent = "📊 הורד PPT";
     }
   }
 </script>

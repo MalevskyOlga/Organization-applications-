@@ -34,6 +34,14 @@ PANEL_GREEN   = ( 20, 115,  50)
 BORDER_BLUE   = ( 80, 155, 255)
 BORDER_GREEN  = ( 60, 195,  95)
 
+try:
+    from bidi.algorithm import get_display as _bidi_display
+    def _heb(s): return _bidi_display(s)
+except ImportError:
+    def _heb(s):
+        words = s.split()
+        return ' '.join(reversed(words)) if len(words) > 1 else s
+
 JAR_CX      = 440          # shifted right to clear panels
 JAR_RIM_TOP =  68
 JAR_RIM_BOT =  86
@@ -327,8 +335,8 @@ def _draw_budget_goal(draw):
         x += 20
     f  = _try_font(13, bold=True)
     lx = JAR_CX + JAR_BODY_HW + 20
-    draw.text((lx + 1, goal_y - 7), "BUDGET GOAL", font=f, fill=(0, 0, 0, 160))
-    draw.text((lx,     goal_y - 8), "BUDGET GOAL", font=f, fill=YELLOW)
+    draw.text((lx + 1, goal_y - 7), _heb("יעד תקציב"), font=f, fill=(0, 0, 0, 160))
+    draw.text((lx,     goal_y - 8), _heb("יעד תקציב"), font=f, fill=YELLOW)
 
 
 def _draw_overflow_badge(draw):
@@ -342,7 +350,7 @@ def _draw_overflow_badge(draw):
     draw.polygon(pts, fill=OVERFLOW_RED)
     draw.ellipse([cx - 58, cy - 30, cx + 58, cy + 30],
                  fill=OVERFLOW_RED, outline=OVERFLOW_YELL, width=3)
-    _centered_text(draw, "OVERFLOW!", cx, cy, _try_font(34, bold=True),
+    _centered_text(draw, _heb("!עודף"), cx, cy, _try_font(34, bold=True),
                    OVERFLOW_YELL, shadow=(80, 0, 0))
 
 
@@ -354,17 +362,17 @@ def _draw_left_panels(draw, current_sales, target, growth_pct):
 
     draw.rounded_rectangle([15, 78, 248, 162], radius=10,
                             fill=PANEL_BLUE, outline=BORDER_BLUE, width=2)
-    draw.text((26, 88), "CURRENT SALES", font=f_lbl, fill=GRAY_LIGHT)
+    draw.text((26, 88), _heb("מכירות נוכחיות"), font=f_lbl, fill=GRAY_LIGHT)
     _centered_text(draw, f"${current_sales:,.0f}", 131, 130, f_val, WHITE, shadow=(0, 0, 0, 160))
 
     draw.rounded_rectangle([15, 172, 248, 256], radius=10,
                             fill=PANEL_GREEN, outline=BORDER_GREEN, width=2)
-    draw.text((26, 182), "SALES TARGET", font=f_lbl, fill=GRAY_LIGHT)
+    draw.text((26, 182), _heb("יעד מכירות"), font=f_lbl, fill=GRAY_LIGHT)
     _centered_text(draw, f"${target:,.0f}", 131, 224, f_val, WHITE, shadow=(0, 0, 0, 160))
 
     draw.rounded_rectangle([15, 266, 248, 430], radius=10,
                             fill=(12, 45, 112), outline=BORDER_BLUE, width=2)
-    draw.text((26, 276), "SALES GROWTH", font=f_lbl, fill=GRAY_LIGHT)
+    draw.text((26, 276), _heb("צמיחת מכירות"), font=f_lbl, fill=GRAY_LIGHT)
 
     gcx, gcy, gr = 131, 370, 62
     for start, end, col in [(180, 220, GAUGE_RED), (220, 260, GAUGE_YELLOW), (260, 360, GAUGE_GREEN)]:
@@ -379,7 +387,7 @@ def _draw_left_panels(draw, current_sales, target, growth_pct):
     _centered_text(draw, f"{growth_pct:.0f}%", gcx, gcy - 17, f_gval, WHITE, shadow=(0, 0, 0, 180))
 
     diff  = growth_pct - 100
-    label = f"+{diff:.0f}% ABOVE TARGET!" if diff >= 0 else f"{diff:.0f}% BELOW TARGET"
+    label = _heb(f"+{diff:.0f}% מעל היעד!") if diff >= 0 else _heb(f"{diff:.0f}% מתחת ליעד")
     _centered_text(draw, label, gcx, gcy + 20, f_sub, GAUGE_GREEN if diff >= 0 else GAUGE_RED)
 
 
