@@ -333,10 +333,10 @@ def _draw_budget_goal(draw):
         draw.line([(x, goal_y), (min(x + 14, JAR_CX + JAR_BODY_HW + 14), goal_y)],
                   fill=YELLOW, width=3)
         x += 20
-    f  = _try_font(13, bold=True)
+    f  = _try_font(20, bold=True)
     lx = JAR_CX + JAR_BODY_HW + 20
-    draw.text((lx + 1, goal_y - 7), _heb("יעד תקציב"), font=f, fill=(0, 0, 0, 160))
-    draw.text((lx,     goal_y - 8), _heb("יעד תקציב"), font=f, fill=YELLOW)
+    draw.text((lx + 1, goal_y - 11), _heb("יעד תקציב"), font=f, fill=(0, 0, 0, 160))
+    draw.text((lx,     goal_y - 12), _heb("יעד תקציב"), font=f, fill=YELLOW)
 
 
 def _draw_overflow_badge(draw):
