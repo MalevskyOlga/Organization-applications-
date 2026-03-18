@@ -1,13 +1,13 @@
 """
-Sales Jar Tracker - image generator v4 (photorealistic).
+Sales Jar Tracker - image generator v7.
 
-Key techniques:
-  - Sky: Gaussian-blurred radial bloom on blue gradient
-  - Coins: dome-shaped natural heap, large layered 3D coins
-  - Glass cylinder: per-column gradient (strong left shine, right shadow)
-                    + subtle glass-blue tint at walls
-  - Rim: thin silver metallic band
-  - Overflow: dramatic arc of large flying coins above jar
+Fixes over v6:
+  - Removed JAR_BULGE (was causing bottom-corner artifacts)
+  - Wider body ratio: NECK=110, BODY=192 (75% wider) - much rounder look
+  - Longer shoulder: SHLDR_Y=185 (75px of curved transition, was 45)
+  - Glass body fill: subtle blue tint on empty interior - no more white fog
+  - Softer glass outline (less plastic-blue)
+  - Reduced right shadow on coins
 """
 
 import math
@@ -18,13 +18,13 @@ W, H = 800, 500
 
 WHITE         = (255, 255, 255)
 YELLOW        = (255, 220,   0)
-GOLD_SHINE    = (255, 252, 200)
-GOLD_LIGHT    = (255, 225,  60)
-GOLD_MID      = (235, 180,  30)
-GOLD_DARK     = (165, 115,   5)
-GOLD_EDGE     = ( 95,  60,   0)
-OVERFLOW_RED  = (195,  20,  20)
-OVERFLOW_YELL = (255, 220,   0)
+GOLD_SHINE    = (255, 255, 228)
+GOLD_LIGHT    = (255, 238,  55)
+GOLD_MID      = (246, 196,  26)
+GOLD_DARK     = (218, 165,  18)
+GOLD_EDGE     = (215, 165,  22)   # warm golden, barely darker than face - eliminates dark halos
+OVERFLOW_RED  = (200,  22,  18)
+OVERFLOW_YELL = (255, 225,   0)
 GRAY_LIGHT    = (210, 220, 230)
 GAUGE_RED     = (210,  30,  30)
 GAUGE_YELLOW  = (230, 200,   0)
@@ -34,66 +34,78 @@ PANEL_GREEN   = ( 20, 115,  50)
 BORDER_BLUE   = ( 80, 155, 255)
 BORDER_GREEN  = ( 60, 195,  95)
 
-JAR_CX      = 430
-JAR_RIM_TOP =  76
-JAR_RIM_BOT =  92
-JAR_NECK_Y  = 122
-JAR_SHLDR_Y = 154
-JAR_BOT_Y   = 448
-JAR_RIM_HW  = 162
-JAR_NECK_HW = 152
-JAR_BODY_HW = 162
-JAR_BR      =  30
+JAR_CX      = 440          # shifted right to clear panels
+JAR_RIM_TOP =  68
+JAR_RIM_BOT =  86
+JAR_NECK_Y  = 110
+JAR_SHLDR_Y = 185          # long curved shoulder (75 px transition)
+JAR_BOT_Y   = 458
+JAR_RIM_HW  = 128
+JAR_NECK_HW = 110          # narrow neck
+JAR_BODY_HW = 192          # wide body - 75% wider than neck
+JAR_BR      =  46
 
 
-def _shoulder_pts(cx, hw_start, hw_end, y_start, y_end, side, steps=12):
+def _shoulder_pts(cx, hw_start, hw_end, y_start, y_end, side, steps=20):
     sign = 1 if side == "right" else -1
-    return [(cx + sign * (hw_start + (hw_end - hw_start) * math.sin(i / steps * math.pi / 2)),
-             y_start + (y_end - y_start) * i / steps)
-            for i in range(steps + 1)]
+    return [
+        (cx + sign * (hw_start + (hw_end - hw_start) * math.sin(i / steps * math.pi / 2)),
+         y_start + (y_end - y_start) * i / steps)
+        for i in range(steps + 1)
+    ]
 
 
 def _jar_outline_pts():
-    cx = JAR_CX
-    pts = [(cx - JAR_RIM_HW, JAR_RIM_TOP), (cx + JAR_RIM_HW, JAR_RIM_TOP),
-           (cx + JAR_RIM_HW, JAR_RIM_BOT), (cx + JAR_NECK_HW + 2, JAR_RIM_BOT),
-           (cx + JAR_NECK_HW, JAR_NECK_Y)]
+    cx  = JAR_CX
+    bry = JAR_BOT_Y - JAR_BR
+    pts = [
+        (cx - JAR_RIM_HW, JAR_RIM_TOP),
+        (cx + JAR_RIM_HW, JAR_RIM_TOP),
+        (cx + JAR_RIM_HW, JAR_RIM_BOT),
+        (cx + JAR_NECK_HW + 2, JAR_RIM_BOT),
+        (cx + JAR_NECK_HW, JAR_NECK_Y),
+    ]
     pts += _shoulder_pts(cx, JAR_NECK_HW, JAR_BODY_HW, JAR_NECK_Y, JAR_SHLDR_Y, "right")[1:]
-    pts += [(cx + JAR_BODY_HW, JAR_BOT_Y - JAR_BR)]
-    ccx, ccy = cx + JAR_BODY_HW - JAR_BR, JAR_BOT_Y - JAR_BR
+    pts += [(cx + JAR_BODY_HW, bry)]
+    ccx, ccy = cx + JAR_BODY_HW - JAR_BR, bry
     for i in range(7):
         a = math.radians(i * 15)
         pts.append((ccx + JAR_BR * math.cos(a), ccy + JAR_BR * math.sin(a)))
     pts += [(cx + JAR_BODY_HW - JAR_BR, JAR_BOT_Y), (cx - JAR_BODY_HW + JAR_BR, JAR_BOT_Y)]
-    ccx2, ccy2 = cx - JAR_BODY_HW + JAR_BR, JAR_BOT_Y - JAR_BR
+    ccx2, ccy2 = cx - JAR_BODY_HW + JAR_BR, bry
     for i in range(7):
         a = math.radians(90 + i * 15)
         pts.append((ccx2 + JAR_BR * math.cos(a), ccy2 + JAR_BR * math.sin(a)))
-    pts += [(cx - JAR_BODY_HW, JAR_SHLDR_Y)]
+    pts += [(cx - JAR_BODY_HW, bry)]
     pts += list(reversed(_shoulder_pts(cx, JAR_NECK_HW, JAR_BODY_HW, JAR_NECK_Y, JAR_SHLDR_Y, "left")[:-1]))
-    pts += [(cx - JAR_NECK_HW - 2, JAR_RIM_BOT), (cx - JAR_RIM_HW, JAR_RIM_BOT), (cx - JAR_RIM_HW, JAR_RIM_TOP)]
+    pts += [
+        (cx - JAR_NECK_HW - 2, JAR_RIM_BOT),
+        (cx - JAR_RIM_HW,      JAR_RIM_BOT),
+        (cx - JAR_RIM_HW,      JAR_RIM_TOP),
+    ]
     return pts
 
 
-def _jar_interior_pts(wall=8):
+def _jar_interior_pts(wall=9):
     cx  = JAR_CX
     nhw = JAR_NECK_HW - wall
     bhw = JAR_BODY_HW - wall
     br  = max(JAR_BR - wall, 8)
     bot = JAR_BOT_Y - wall // 2
+    bry = bot - br
     pts = [(cx - nhw, JAR_NECK_Y), (cx + nhw, JAR_NECK_Y)]
     pts += _shoulder_pts(cx, nhw, bhw, JAR_NECK_Y, JAR_SHLDR_Y, "right")[1:]
-    pts += [(cx + bhw, bot - br)]
-    ccx, ccy = cx + bhw - br, bot - br
+    pts += [(cx + bhw, bry)]
+    ccx, ccy = cx + bhw - br, bry
     for i in range(7):
         a = math.radians(i * 15)
         pts.append((ccx + br * math.cos(a), ccy + br * math.sin(a)))
     pts += [(cx + bhw - br, bot), (cx - bhw + br, bot)]
-    ccx2, ccy2 = cx - bhw + br, bot - br
+    ccx2, ccy2 = cx - bhw + br, bry
     for i in range(7):
         a = math.radians(90 + i * 15)
         pts.append((ccx2 + br * math.cos(a), ccy2 + br * math.sin(a)))
-    pts += [(cx - bhw, JAR_SHLDR_Y)]
+    pts += [(cx - bhw, bry)]
     pts += list(reversed(_shoulder_pts(cx, nhw, bhw, JAR_NECK_Y, JAR_SHLDR_Y, "left")[:-1]))
     return pts
 
@@ -135,24 +147,27 @@ def _draw_sky_bg(img, draw):
         draw.line([(0, y), (W, y)], fill=(r, g, b))
     glow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     gd   = ImageDraw.Draw(glow)
-    fcx  = int(W * 0.53)
-    gd.ellipse([fcx - 260, -110, fcx + 260, 400], fill=(252, 255, 255, 170))
-    gd.ellipse([fcx - 155, -75,  fcx + 155, 280], fill=(255, 255, 255, 210))
-    gd.ellipse([fcx - 80,  -45,  fcx + 80,  195], fill=(255, 255, 255, 255))
-    img.alpha_composite(glow.filter(ImageFilter.GaussianBlur(radius=75)))
+    fcx  = int(W * 0.55)
+    gd.ellipse([fcx - 280, -120, fcx + 280, 430], fill=(252, 255, 255, 140))
+    gd.ellipse([fcx - 170, -85,  fcx + 170, 310], fill=(255, 255, 255, 185))
+    gd.ellipse([fcx - 95,  -55,  fcx + 95,  220], fill=(255, 255, 255, 235))
+    img.alpha_composite(glow.filter(ImageFilter.GaussianBlur(radius=80)))
 
 
 def _draw_coin(draw, cx, cy, rw, rh=None):
     if rh is None:
-        rh = max(rw * 2 // 5, 5)
-    draw.ellipse([cx - rw + 2, cy - rh + 3, cx + rw + 3, cy + rh + 4], fill=(50, 28, 0, 120))
-    draw.ellipse([cx - rw, cy - rh, cx + rw, cy + rh], fill=GOLD_EDGE)
-    draw.ellipse([cx - rw + 2, cy - rh + 1, cx + rw - 2, cy + rh - 1], fill=GOLD_DARK)
-    draw.ellipse([cx - rw + 4, cy - rh + 2, cx + rw - 4, cy + rh - 2], fill=GOLD_MID)
-    draw.ellipse([cx - rw + 7, cy - rh + 3, cx + rw - 7, cy + rh - 3], fill=GOLD_LIGHT)
-    sw = max(rw // 2, 5)
-    sh = max(rh // 2, 3)
-    draw.ellipse([cx - sw - 1, cy - sh - 1, cx - sw // 3, cy + sh // 3], fill=GOLD_SHINE)
+        rh = max(rw * 5 // 12, 5)   # ~42% ratio - flatter, more coin-like
+    # Very faint shadow - just 1px below
+    draw.ellipse([cx - rw + 1, cy - rh + 1, cx + rw + 1, cy + rh + 2], fill=(22, 10, 0, 18))
+    # Thin edge ring then quick gradient to bright centre
+    draw.ellipse([cx - rw,     cy - rh,     cx + rw,     cy + rh    ], fill=GOLD_EDGE)
+    draw.ellipse([cx - rw + 1, cy - rh + 1, cx + rw - 1, cy + rh - 1], fill=GOLD_DARK)
+    draw.ellipse([cx - rw + 3, cy - rh + 2, cx + rw - 3, cy + rh - 2], fill=GOLD_MID)
+    draw.ellipse([cx - rw + 5, cy - rh + 3, cx + rw - 5, cy + rh - 3], fill=GOLD_LIGHT)
+    # Prominent upper-left shine spot
+    sw = max(rw * 6 // 8, 5)
+    sh = max(rh * 3 // 4, 3)
+    draw.ellipse([cx - sw,     cy - sh - 1, cx,          cy + sh // 5], fill=GOLD_SHINE)
 
 
 def _draw_coins_in_jar(img, fill_ratio):
@@ -162,44 +177,48 @@ def _draw_coins_in_jar(img, fill_ratio):
     bot_y   = max(ys)
     h_int   = bot_y - top_y
 
+    # Subtle glass-blue tint fills the whole interior (makes empty area look like glass)
+    glass_fill = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    ImageDraw.Draw(glass_fill).polygon(int_pts, fill=(195, 228, 255, 30))
+    img.alpha_composite(glass_fill)
+
     if fill_ratio <= 0.01:
         return
 
     clamped  = min(fill_ratio, 1.08)
     flat_top = bot_y - int(h_int * clamped)
-    flat_top = max(flat_top, top_y - 26)
-    dome_h   = min(38, h_int * 0.09)
+    flat_top = max(flat_top, top_y - 30)
+    dome_h   = min(50, h_int * 0.10)
 
     layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     draw  = ImageDraw.Draw(layer)
-
     draw.polygon(int_pts, fill=GOLD_MID)
 
-    row_h   = 22
+    row_h   = 23   # tighter rows - coins overlap slightly
     row_num = 0
     row_y   = int(bot_y) - row_h // 2
 
     while row_y > flat_top - row_h:
         xl, xr = _poly_x_at_y(int_pts, row_y)
-        if xr - xl < 40:
+        if xr - xl < 50:
             row_y -= row_h; row_num += 1; continue
-        xl_in = xl + 16
-        xr_in = xr - 16
-        offset   = 12 if row_num % 2 else 0
+        xl_in    = xl + 14
+        xr_in    = xr - 14
+        offset   = 14 if row_num % 2 else 0
         cx_start = int(xl_in) + offset
         while cx_start < int(xr_in) - 14:
             near_top = row_y < flat_top + row_h * 2
-            rw = 16 if near_top else 14
-            _draw_coin(draw, cx_start, row_y, rw, max(rw * 2 // 5, 6))
-            cx_start += 30
+            rw = 18 if near_top else 16
+            _draw_coin(draw, cx_start, row_y, rw)
+            cx_start += 29   # slight overlap for dense packing
         row_y  -= row_h
         row_num += 1
 
     xl_t, xr_t = _poly_x_at_y(int_pts, flat_top)
-    for wx in range(int(xl_t) + 20, int(xr_t) - 20, 28):
+    for wx in range(int(xl_t) + 20, int(xr_t) - 20, 30):
         dx     = abs(wx - JAR_CX) / max(JAR_BODY_HW - 20, 1)
         dome_y = flat_top + int(dome_h * min(dx, 1.0) ** 1.6)
-        _draw_coin(draw, wx, dome_y, 18, 8)
+        _draw_coin(draw, wx, dome_y, 22)
 
     mask = Image.new("L", (W, H), 0)
     md   = ImageDraw.Draw(mask)
@@ -209,49 +228,45 @@ def _draw_coins_in_jar(img, fill_ratio):
     img.paste(layer, mask=mask)
 
 
-def _apply_cylindrical_lighting(img, int_pts):
+def _apply_glass_effect(img, int_pts):
+    """Left-side blurred strip + right shadow + blue edge tints, all clipped to interior."""
     ys    = [p[1] for p in int_pts]
-    top_y = int(min(ys)) + 4
-    bot_y = int(max(ys)) - 8
-
-    overlay = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    od      = ImageDraw.Draw(overlay)
+    top_y = int(min(ys))
+    bot_y = int(max(ys))
 
     x_left  = int(JAR_CX - JAR_BODY_HW)
     x_right = int(JAR_CX + JAR_BODY_HW)
-    jar_w   = x_right - x_left
 
-    for x in range(x_left, x_right):
-        t = (x - x_left) / jar_w
+    combined = Image.new("RGBA", (W, H), (0, 0, 0, 0))
 
-        if t < 0.25:
-            s = (0.25 - t) / 0.25
-            alpha = int(s ** 1.8 * 215)
-            od.line([(x, top_y), (x, bot_y)], fill=(255, 255, 255, alpha))
-        elif t < 0.35:
-            s = (0.35 - t) / 0.10
-            alpha = int(s * 55)
-            od.line([(x, top_y), (x, bot_y)], fill=(255, 255, 255, alpha))
+    # 1. LEFT EDGE SHINE — very narrow strip (glass wall reflection only, not over coins)
+    shine = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    sd    = ImageDraw.Draw(shine)
+    sd.rectangle([x_left,      top_y, x_left + 32, bot_y], fill=(255, 255, 255,  90))
+    sd.rectangle([x_left,      top_y, x_left + 14, bot_y], fill=(255, 255, 255, 195))
+    sd.rectangle([x_left + 1,  top_y, x_left +  6, bot_y], fill=(255, 255, 255, 255))
+    shine = shine.filter(ImageFilter.GaussianBlur(radius=9))
+    combined.alpha_composite(shine)
 
-        if t > 0.78:
-            s = (t - 0.78) / 0.22
-            alpha = int(s ** 1.5 * 105)
-            od.line([(x, top_y), (x, bot_y)], fill=(10, 22, 55, alpha))
+    # 2. RIGHT SHADOW — very subtle, only the glass wall itself (not over coins)
+    shadow = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    shd    = ImageDraw.Draw(shadow)
+    shd.rectangle([x_right - 22, top_y, x_right, bot_y], fill=(5, 18, 55, 28))
+    shadow = shadow.filter(ImageFilter.GaussianBlur(radius=8))
+    combined.alpha_composite(shadow)
 
-        if t < 0.07:
-            s = (0.07 - t) / 0.07
-            alpha = int(s ** 1.2 * 75)
-            od.line([(x, top_y), (x, bot_y)], fill=(165, 215, 250, alpha))
-        elif t > 0.93:
-            s = (t - 0.93) / 0.07
-            alpha = int(s ** 1.2 * 60)
-            od.line([(x, top_y), (x, bot_y)], fill=(135, 185, 230, alpha))
+    # 3. BLUE GLASS EDGE TINTS
+    edge = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    ed   = ImageDraw.Draw(edge)
+    ed.rectangle([x_left,       top_y, x_left + 20,  bot_y], fill=(140, 198, 255, 110))
+    ed.rectangle([x_right - 20, top_y, x_right,      bot_y], fill=(105, 165, 238,  95))
+    edge = edge.filter(ImageFilter.GaussianBlur(radius=8))
+    combined.alpha_composite(edge)
 
-    overlay = overlay.filter(ImageFilter.GaussianBlur(radius=5))
     mask = Image.new("L", (W, H), 0)
     ImageDraw.Draw(mask).polygon(int_pts, fill=255)
     clipped = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    clipped.paste(overlay, mask=mask)
+    clipped.paste(combined, mask=mask)
     img.alpha_composite(clipped)
 
 
@@ -259,15 +274,21 @@ def _draw_glass_outline(img):
     glass = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     gd    = ImageDraw.Draw(glass)
     outline = _jar_outline_pts()
-    gd.polygon(outline, fill=(200, 228, 252, 5))
-    gd.polygon(outline, outline=(130, 195, 238, 185), width=4)
-    rim = [(JAR_CX - JAR_RIM_HW, JAR_RIM_TOP), (JAR_CX + JAR_RIM_HW, JAR_RIM_TOP),
-           (JAR_CX + JAR_RIM_HW, JAR_RIM_BOT), (JAR_CX - JAR_RIM_HW, JAR_RIM_BOT)]
-    gd.polygon(rim, fill=(152, 168, 182, 218))
-    gd.polygon(rim, outline=(120, 138, 155, 240), width=2)
-    gd.rectangle([JAR_CX - JAR_RIM_HW + 2, JAR_RIM_TOP + 1,
-                  JAR_CX + JAR_RIM_HW - 2, JAR_RIM_TOP + 5],
-                 fill=(220, 232, 242, 140))
+    gd.polygon(outline, fill=(200, 228, 255, 4))
+    # Softer, less plastic outline
+    gd.polygon(outline, outline=(165, 215, 252, 175), width=9)
+    gd.polygon(outline, outline=(225, 245, 255, 80),  width=3)
+    rim = [
+        (JAR_CX - JAR_RIM_HW, JAR_RIM_TOP),
+        (JAR_CX + JAR_RIM_HW, JAR_RIM_TOP),
+        (JAR_CX + JAR_RIM_HW, JAR_RIM_BOT),
+        (JAR_CX - JAR_RIM_HW, JAR_RIM_BOT),
+    ]
+    gd.polygon(rim, fill=(165, 190, 215, 210))
+    gd.polygon(rim, outline=(115, 142, 168, 235), width=2)
+    gd.rectangle([JAR_CX - JAR_RIM_HW + 3, JAR_RIM_TOP + 1,
+                  JAR_CX + JAR_RIM_HW - 3, JAR_RIM_TOP + 6],
+                 fill=(230, 245, 255, 160))
     img.alpha_composite(glass)
 
 
@@ -275,18 +296,22 @@ def _draw_overflow_coins(img):
     layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     draw  = ImageDraw.Draw(layer)
     coins = [
-        (JAR_CX - 105, JAR_RIM_TOP +  8, 15,  9),
-        (JAR_CX -  72, JAR_RIM_TOP - 26, 20,  9),
-        (JAR_CX -  36, JAR_RIM_TOP - 50, 22, 10),
-        (JAR_CX +   0, JAR_RIM_TOP - 62, 24, 11),
-        (JAR_CX +  38, JAR_RIM_TOP - 52, 22, 10),
-        (JAR_CX +  74, JAR_RIM_TOP - 28, 20,  9),
-        (JAR_CX + 108, JAR_RIM_TOP +  6, 15,  9),
-        (JAR_CX -  52, JAR_RIM_TOP - 78, 17,  8),
-        (JAR_CX +  52, JAR_RIM_TOP - 80, 17,  8),
-        (JAR_CX +   0, JAR_RIM_TOP - 90, 15,  7),
-        (JAR_CX -  20, JAR_RIM_TOP - 38, 13,  6),
-        (JAR_CX +  20, JAR_RIM_TOP - 40, 13,  6),
+        (JAR_CX - 148, JAR_RIM_TOP + 20, 13,  7),
+        (JAR_CX - 115, JAR_RIM_TOP - 14, 18,  9),
+        (JAR_CX -  78, JAR_RIM_TOP - 52, 22, 11),
+        (JAR_CX -  38, JAR_RIM_TOP - 76, 25, 12),
+        (JAR_CX +   0, JAR_RIM_TOP - 90, 27, 13),
+        (JAR_CX +  40, JAR_RIM_TOP - 78, 25, 12),
+        (JAR_CX +  80, JAR_RIM_TOP - 54, 22, 11),
+        (JAR_CX + 117, JAR_RIM_TOP - 16, 18,  9),
+        (JAR_CX + 150, JAR_RIM_TOP + 18, 13,  7),
+        (JAR_CX -  60, JAR_RIM_TOP - 112, 16,  8),
+        (JAR_CX +   0, JAR_RIM_TOP - 126, 15,  7),
+        (JAR_CX +  62, JAR_RIM_TOP - 114, 16,  8),
+        (JAR_CX -  25, JAR_RIM_TOP -  52, 13,  6),
+        (JAR_CX +  27, JAR_RIM_TOP -  54, 13,  6),
+        (JAR_CX -  98, JAR_RIM_TOP +   5, 11,  6),
+        (JAR_CX + 100, JAR_RIM_TOP +   4, 11,  6),
     ]
     for cx, cy, rw, rh in coins:
         _draw_coin(draw, cx, cy, rw, rh)
@@ -294,14 +319,14 @@ def _draw_overflow_coins(img):
 
 
 def _draw_budget_goal(draw):
-    goal_y = JAR_SHLDR_Y + int((JAR_BOT_Y - JAR_SHLDR_Y) * 0.10)
+    goal_y = JAR_SHLDR_Y + int((JAR_BOT_Y - JAR_SHLDR_Y) * 0.06)
     x = JAR_CX - JAR_BODY_HW - 14
     while x < JAR_CX + JAR_BODY_HW + 14:
         draw.line([(x, goal_y), (min(x + 14, JAR_CX + JAR_BODY_HW + 14), goal_y)],
                   fill=YELLOW, width=3)
         x += 20
     f  = _try_font(13, bold=True)
-    lx = JAR_CX + JAR_BODY_HW + 18
+    lx = JAR_CX + JAR_BODY_HW + 20
     draw.text((lx + 1, goal_y - 7), "BUDGET GOAL", font=f, fill=(0, 0, 0, 160))
     draw.text((lx,     goal_y - 8), "BUDGET GOAL", font=f, fill=YELLOW)
 
@@ -370,7 +395,7 @@ def generate_image(current_sales, monthly_target):
     int_pts = _jar_interior_pts()
 
     _draw_coins_in_jar(img, fill_ratio)
-    _apply_cylindrical_lighting(img, int_pts)
+    _apply_glass_effect(img, int_pts)
     _draw_glass_outline(img)
 
     draw = ImageDraw.Draw(img)
